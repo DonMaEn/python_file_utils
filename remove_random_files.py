@@ -5,13 +5,18 @@ import unittest
 import sys
 import tempfile
 import shutil
+from tqdm import tqdm
 
 
-def remove_files(directories, n, seed):
+def remove_files(directories, n, seed, verbose=False):
     random.seed(seed)
     files = os.listdir(directories[0])
     indexes = range(len(files))
-    for _ in range(n):
+    itr = range(n)
+    if verbose:
+        print('Removing', n, 'files...')
+        itr = tqdm(itr)
+    for _ in itr:
         i = random.choice(indexes)
         file = files[i]
         indexes = range(len(indexes) - 1)
@@ -58,9 +63,11 @@ if __name__ == '__main__':
                         help='the number of files to remove from each directory')
     parser.add_argument('--seed', metavar='s', type=int, default=0,
                         help='the seed for the random number generator')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Verbose output and loading bar')
     args, unknown = parser.parse_known_args()
 
     if args.test:
         unittest.main(argv=[sys.argv[0]] + unknown)
     else:
-        remove_files(args.directories, args.num, args.seed)
+        remove_files(args.directories, args.num, args.seed, args.verbose)

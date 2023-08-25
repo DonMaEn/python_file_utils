@@ -4,9 +4,10 @@ import unittest
 import sys
 import argparse
 import os
+from tqdm import tqdm
 
 
-def check_directories(directories, remove=False):
+def check_directories(directories, remove=False, verbose=False):
     """
     Check if all directories have the same files.
     :param directories: list of directories to check
@@ -17,20 +18,39 @@ def check_directories(directories, remove=False):
         print("only 1 directory specified, nothing to do")
         return
 
+    if verbose:
+        print('Processing', len(directories), 'directories.')
+        print('Finding all unique files in each directory...')
+
     # Get a set of all files in each directory
     file_sets = []
-    for directory in directories:
+    itr = directories
+    if verbose:
+        itr = tqdm(directories)
+    for directory in itr:
         file_set = set(os.listdir(directory))
         file_sets.append(file_set)
 
+    if verbose:
+        print("Found all sets, finding set intersection of all files...")
     intersection = set.intersection(*file_sets)
 
     # Check to see if all the files in all directories are the same
     all_same_files = True
-    for file_set in file_sets:
+    itr = file_sets
+    if verbose:
+        print('Checking to make sure all directories contain only files in set intersect...')
+        itr = tqdm(file_sets)
+    for file_set in itr:
+        if len(file_set) != len(intersection):
+            all_same_files = False
+            break
         for file in file_set:
             if not file in intersection:
                 all_same_files = False
+                break
+        if not all_same_files:
+            break
 
     if all_same_files:
         print('All directories have the same files.')
@@ -39,7 +59,10 @@ def check_directories(directories, remove=False):
         print('Not all directories have the same files.')
         # Remove files that do not exist in all directories
         if remove:
-            for i, directory in enumerate(directories):
+            itr = directories
+            if verbose:
+                itr = tqdm(directories)
+            for i, directory in enumerate(itr):
                 file_set = file_sets[i]
                 for file in file_set:
                     if file not in intersection:
@@ -96,11 +119,13 @@ if __name__ == '__main__':
     # Only required if --test is not specified
     parser.add_argument('--directories', '-d', required='--test' not in sys.argv, type=str, nargs='+',
                         help='directories to check')
-    parser.add_argument('--remove', action='store_true',
+    parser.add_argument('--remove', '-r', action='store_true',
                         help='remove files that do not exist in all directories')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Verbose output and loading bars')
     #args = parser.parse_args()
     args, unknown = parser.parse_known_args()
     if args.test:
         unittest.main(argv=[sys.argv[0]] + unknown)
     else:
-        check_directories(args.directories, args.remove)
+        check_directories(args.directories, args.remove, args.verbose)
